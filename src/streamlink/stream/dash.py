@@ -291,15 +291,11 @@ class DASHStream(Stream):
         audio: List[Optional[Representation]] = [None] if with_video_only else []
 
         # Search for suitable video and audio representations
-        for aset in mpd.periods[period].adaptationSets:
-            if aset.contentProtections:
-                raise PluginError(f"{source} is protected by DRM")
+        for aset in mpd.periods[0].adaptationSets:
             for rep in aset.representations:
-                if rep.contentProtections:
-                    raise PluginError(f"{source} is protected by DRM")
                 if rep.mimeType.startswith("video"):
                     video.append(rep)
-                elif rep.mimeType.startswith("audio"):  # pragma: no branch
+                elif rep.mimeType.startswith("audio"):
                     audio.append(rep)
 
         if not video:
