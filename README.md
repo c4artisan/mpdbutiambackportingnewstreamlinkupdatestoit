@@ -9,6 +9,12 @@
   <a href="https://codecov.io/github/streamlink/streamlink?branch=master"><img alt="Overall code coverage" src="https://img.shields.io/codecov/c/github/streamlink/streamlink.svg?branch=master&style=flat-square&maxAge=86400"></a>
 </p>
 
+Fork of Streamlink which includes the option to specify a decryption key. Tested on DASH Live Stream encryption.
+
+e.g streamlink urlofmpd best -o "C:\Users\User\Downloads\test.mkv" --ffmpeg_dkey "03de....."
+
+--ffmpeg_dkey , --ffmpeg_dkey_2
+
 <p align="center">
   A Python library and command-line interface which pipes streams from various services into a video player.<br>
   Avoid resource-heavy and unoptimized websites, and still enjoy streamed content.
