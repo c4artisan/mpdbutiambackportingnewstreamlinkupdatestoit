@@ -3,25 +3,22 @@ import re
 import struct
 from concurrent.futures import Future
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 from urllib.parse import urlparse
 
-# noinspection PyPackageRequirements
-from Crypto.Cipher import AES
-
-# noinspection PyPackageRequirements
-from Crypto.Util.Padding import unpad
 from requests import Response
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ContentDecodingError, InvalidSchema
 
 from streamlink.buffers import RingBuffer
 from streamlink.exceptions import StreamError
+from streamlink.session import Streamlink
 from streamlink.stream.ffmpegmux import FFMPEGMuxer, MuxedStream
 from streamlink.stream.filtered import FilteredStream
 from streamlink.stream.hls_playlist import M3U8, ByteRange, Key, Map, Media, Segment, load as load_hls_playlist
 from streamlink.stream.http import HTTPStream
 from streamlink.stream.segmented import SegmentedStreamReader, SegmentedStreamWorker, SegmentedStreamWriter
 from streamlink.utils.cache import LRUCache
+from streamlink.utils.crypto import AES, unpad
 from streamlink.utils.formatter import Formatter
 from streamlink.utils.times import now
 
@@ -534,7 +531,7 @@ class MuxedHLSStream(MuxedStream["HLSStream"]):
 
     def __init__(
         self,
-        session,
+        session: Streamlink,
         video: str,
         audio: Union[str, List[str]],
         url_master: Optional[str] = None,
@@ -544,7 +541,7 @@ class MuxedHLSStream(MuxedStream["HLSStream"]):
         **args,
     ):
         """
-        :param streamlink.Streamlink session: Streamlink session instance
+        :param session: Streamlink session instance
         :param video: Video stream URL
         :param audio: Audio stream URL or list of URLs
         :param url_master: The URL of the HLS playlist's multivariant playlist (deprecated)
@@ -600,10 +597,11 @@ class HLSStream(HTTPStream):
         force_restart: bool = False,
         start_offset: float = 0,
         duration: Optional[float] = None,
+        # TODO: turn args into dedicated keyword
         **args,
     ):
         """
-        :param streamlink.Streamlink session_: Streamlink session instance
+        :param streamlink.session.Streamlink session_: Streamlink session instance
         :param url: The URL of the HLS playlist
         :param url_master: The URL of the HLS playlist's multivariant playlist (deprecated)
         :param multivariant: The parsed multivariant playlist
@@ -679,12 +677,14 @@ class HLSStream(HTTPStream):
         name_fmt: Optional[str] = None,
         start_offset: float = 0,
         duration: Optional[float] = None,
+        keywords: Optional[Mapping] = None,
+        # TODO: turn request_params into a dedicated keyword
         **request_params,
     ) -> Dict[str, Union["HLSStream", "MuxedHLSStream"]]:
         """
         Parse a variant playlist and return its streams.
 
-        :param streamlink.Streamlink session_: Streamlink session instance
+        :param streamlink.session.Streamlink session_: Streamlink session instance
         :param url: The URL of the variant playlist
         :param name_key: Prefer to use this key as stream name, valid keys are: name, pixels, bitrate
         :param name_prefix: Add this prefix to the stream names
@@ -693,6 +693,7 @@ class HLSStream(HTTPStream):
         :param name_fmt: A format string for the name, allowed format keys are: name, pixels, bitrate
         :param start_offset: Number of seconds to be skipped from the beginning
         :param duration: Number of second until ending the stream
+        :param keywords: Optional keywords to be passed to the :class:`HLSStream` or :class:`MuxedHLSStream`
         :param request_params: Additional keyword arguments passed to :class:`HLSStream`, :class:`MuxedHLSStream`,
                                or :py:meth:`requests.Session.request`
         """
@@ -710,6 +711,7 @@ class HLSStream(HTTPStream):
         stream_name: Optional[str]
         stream: Union["HLSStream", "MuxedHLSStream"]
         streams: Dict[str, Union["HLSStream", "MuxedHLSStream"]] = {}
+        keywords = keywords or {}
 
         for playlist in filter(lambda p: not p.is_iframe, multivariant.playlists):
             names: Dict[str, Optional[str]] = dict(name=None, pixels=None, bitrate=None)
@@ -818,6 +820,7 @@ class HLSStream(HTTPStream):
                     force_restart=force_restart,
                     start_offset=start_offset,
                     duration=duration,
+                    **keywords,
                     **request_params,
                 )
             else:
@@ -828,6 +831,7 @@ class HLSStream(HTTPStream):
                     force_restart=force_restart,
                     start_offset=start_offset,
                     duration=duration,
+                    **keywords,
                     **request_params,
                 )
 

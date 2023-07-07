@@ -3,18 +3,18 @@ import typing
 import unittest
 from datetime import datetime, timedelta, timezone
 from threading import Event
+from typing import Dict
 from unittest.mock import Mock, call, patch
 
 import freezegun
 import pytest
-import requests_mock
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad
+import requests_mock as rm
 from requests.exceptions import InvalidSchema
 
 from streamlink.session import Streamlink
 from streamlink.stream.hls import HLSStream, HLSStreamReader, MuxedHLSStream
 from streamlink.stream.hls_playlist import M3U8Parser
+from streamlink.utils.crypto import AES, pad
 from tests.mixins.stream_hls import EventedHLSStreamWorker, EventedHLSStreamWriter, Playlist, Segment, Tag, TestMixinStreamHLS
 from tests.resources import text
 
@@ -74,40 +74,33 @@ class SegmentEnc(EncryptedBase, Segment):
     pass
 
 
-class TestHLSStreamRepr(unittest.TestCase):
-    def test_repr(self):
-        session = Streamlink()
+def test_repr(session: Streamlink):
+    stream = HLSStream(session, "https://foo.bar/playlist.m3u8")
+    assert repr(stream) == "<HLSStream ['hls', 'https://foo.bar/playlist.m3u8']>"
 
-        stream = HLSStream(session, "https://foo.bar/playlist.m3u8")
-        assert repr(stream) == "<HLSStream ['hls', 'https://foo.bar/playlist.m3u8']>"
-
-        stream = HLSStream(session, "https://foo.bar/playlist.m3u8", "https://foo.bar/master.m3u8")
-        assert repr(stream) == "<HLSStream ['hls', 'https://foo.bar/playlist.m3u8', 'https://foo.bar/master.m3u8']>"
+    stream = HLSStream(session, "https://foo.bar/playlist.m3u8", "https://foo.bar/master.m3u8")
+    assert repr(stream) == "<HLSStream ['hls', 'https://foo.bar/playlist.m3u8', 'https://foo.bar/master.m3u8']>"
 
 
-class TestHLSVariantPlaylist(unittest.TestCase):
-    @classmethod
-    def get_master_playlist(cls, playlist):
-        with text(playlist) as pl:
-            return pl.read()
+class TestHLSVariantPlaylist:
+    @pytest.fixture()
+    def streams(self, request: pytest.FixtureRequest, requests_mock: rm.Mocker, session: Streamlink):
+        url = f"http://mocked/{request.node.originalname}/master.m3u8"
+        playlist = getattr(request, "param", "")
 
-    def subject(self, playlist, options=None):
-        with requests_mock.Mocker() as mock:
-            url = f"http://mocked/{self.id()}/master.m3u8"
-            content = self.get_master_playlist(playlist)
-            mock.get(url, text=content)
+        with text(playlist) as fd:
+            content = fd.read()
+        requests_mock.get(url, text=content)
 
-            session = Streamlink(options)
+        return HLSStream.parse_variant_playlist(session, url)
 
-            return HLSStream.parse_variant_playlist(session, url)
-
-    def test_variant_playlist(self):
-        streams = self.subject("hls/test_master.m3u8")
+    @pytest.mark.parametrize("streams", ["hls/test_master.m3u8"], indirect=True)
+    def test_variant_playlist(self, request: pytest.FixtureRequest, streams: Dict[str, HLSStream]):
         assert list(streams.keys()) == ["720p", "720p_alt", "480p", "360p", "160p", "1080p (source)", "90k"]
         assert all(isinstance(stream, HLSStream) for stream in streams.values())
         assert all(stream.multivariant is not None and stream.multivariant.is_master for stream in streams.values())
 
-        base = f"http://mocked/{self.id()}"
+        base = f"http://mocked/{request.node.originalname}"
         stream = next(iter(streams.values()))
         assert repr(stream) == f"<HLSStream ['hls', '{base}/720p.m3u8', '{base}/master.m3u8']>"
 
@@ -115,8 +108,7 @@ class TestHLSVariantPlaylist(unittest.TestCase):
         assert stream.multivariant.uri == f"{base}/master.m3u8"
         assert stream.url_master == f"{base}/master.m3u8"
 
-    def test_url_master(self):
-        session = Streamlink()
+    def test_url_master(self, session: Streamlink):
         stream = HLSStream(session, "http://mocked/foo", url_master="http://mocked/master.m3u8")
 
         assert stream.multivariant is None
@@ -824,10 +816,9 @@ class TestHlsExtAudio:
         monkeypatch.setattr("streamlink.stream.hls.FFMPEGMuxer.is_usable", Mock(return_value=True))
 
     @pytest.fixture(autouse=True)
-    def _playlist(self):
-        with text("hls/test_2.m3u8") as playlist, \
-             requests_mock.Mocker() as mock_requests:
-            mock_requests.get("http://mocked/path/master.m3u8", text=playlist.read())
+    def _playlist(self, requests_mock: rm.Mocker):
+        with text("hls/test_2.m3u8") as playlist:
+            requests_mock.get("http://mocked/path/master.m3u8", text=playlist.read())
             yield
 
     @pytest.fixture()
