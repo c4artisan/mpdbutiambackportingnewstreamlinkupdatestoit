@@ -10,6 +10,7 @@
 </p>
 
 Fork of Streamlink which includes the option to specify a decryption key. Tested on DASH Live Stream encryption.
+Regularly update with main repo.
 
 e.g streamlink urlofmpd best -o "C:\Users\User\Downloads\test.mkv" --ffmpeg_dkey "03de....."
 
@@ -27,13 +28,15 @@ e.g streamlink urlofmpd best -o "C:\Users\User\Downloads\test.mkv" --ffmpeg_dkey
 
 # 📦 Installation
 
-Please take a look at the documentation for different ways of installing Streamlink:
+Requirements: 
+- Python 3 (Recommend python3.9+)
+- pip3
 
-- [Windows][streamlink-installation-windows]
-- [macOS][streamlink-installation-macos]
-- [Linux and BSD][streamlink-installation-linux-and-bsd]
-- [PyPI package and source code][streamlink-installation-pypi-source]
-
+Using pip3, use the following command to install streamlink for the current user
+Support Windows, Macos and Linux.
+```
+pip3 install --user -U git+https://github.com/Scotto0/streamlink
+```
 
 # 👍 Features
 
