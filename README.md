@@ -33,6 +33,7 @@ Requirements:
 - pip3
 
 Using pip3, use the following command to install streamlink for the current user
+
 Support Windows, Macos and Linux.
 ```
 pip3 install --user -U git+https://github.com/Scotto0/streamlink
