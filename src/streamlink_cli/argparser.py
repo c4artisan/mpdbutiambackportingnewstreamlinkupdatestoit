@@ -954,6 +954,24 @@ def build_parser():
         """,
     )
     transport_hls.add_argument(
+        "--hls-segment-queue-threshold",
+        metavar="FACTOR",
+        type=num(float, ge=0),
+        help="""
+        The multiplication factor of the HLS playlist's target duration after which the stream will be stopped early
+        if no new segments were queued after refreshing the playlist (multiple times). The target duration defines the
+        maximum duration a single segment can have, meaning new segments must be available during this time frame,
+        otherwise playback issues can occur.
+
+        The intention of this queue threshold is to be able to stop early when the end of a stream doesn't get
+        announced by the server, so Streamlink doesn't have to wait until a read-timeout occurs. See --stream-timeout.
+
+        Set to ``0`` to disable.
+
+        Default is 3.
+        """,
+    )
+    transport_hls.add_argument(
         "--hls-segment-ignore-names",
         metavar="NAMES",
         type=comma_list,
@@ -1289,7 +1307,8 @@ def build_parser():
         The web browser is run isolated and in a clean environment without access to regular user data.
 
         Streamlink currently only supports Chromium-based web browsers using the Chrome Devtools Protocol (CDP).
-        This includes Chromium itself, Google Chrome, Brave, Vivaldi, and others.
+        This includes Chromium itself, Google Chrome, Microsoft Edge, Brave, Vivaldi, and others, but full support for
+        third party Chromium forks is not guaranteed. If you encounter any issues, please try Chromium or Google Chrome instead.
 
         Default is true.
         """,
@@ -1399,6 +1418,7 @@ _ARGUMENT_TO_SESSIONOPTION: List[Tuple[str, str, Optional[Callable[[Any], Any]]]
     ("hls_duration", "hls-duration", None),
     ("hls_playlist_reload_attempts", "hls-playlist-reload-attempts", None),
     ("hls_playlist_reload_time", "hls-playlist-reload-time", None),
+    ("hls_segment_queue_threshold", "hls-segment-queue-threshold", None),
     ("hls_segment_stream_data", "hls-segment-stream-data", None),
     ("hls_segment_ignore_names", "hls-segment-ignore-names", None),
     ("hls_segment_key_uri", "hls-segment-key-uri", None),
