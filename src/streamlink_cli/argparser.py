@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from streamlink import __version__ as streamlink_version, logger
 from streamlink.session import Streamlink
 from streamlink.utils.args import boolean, comma_list, comma_list_filter, filesize, keyvalue, num
-from streamlink.utils.times import hours_minutes_seconds
+from streamlink.utils.times import hours_minutes_seconds_float
 from streamlink_cli.constants import STREAM_PASSTHROUGH
 from streamlink_cli.output.player import PlayerOutput
 from streamlink_cli.utils import find_default_player
@@ -21,7 +21,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
     _RE_PRINTABLE = re.compile(fr"[{re.escape(printable)}]")
     _RE_OPTION = re.compile(r"^(?P<name>[A-Za-z0-9-]+)(?:(?P<op>\s*=\s*|\s+)(?P<value>.*))?$")
-    
+
     def __init__(self, *args, **kwargs):
         self.NESTED_ARGUMENT_GROUPS = {}
         super().__init__(*args, **kwargs)
@@ -1021,21 +1021,19 @@ def build_parser():
     )
     transport_hls.add_argument(
         "--hls-start-offset",
-        type=hours_minutes_seconds,
-        metavar="[HH:]MM:SS",
-        default=None,
+        type=hours_minutes_seconds_float,
+        metavar="[[XX:]XX:]XX[.XX] | [XXh][XXm][XX[.XX]s]",
         help="""
         Amount of time to skip from the beginning of the stream. For live
         streams, this is a negative offset from the end of the stream (rewind).
 
-        Default is 00:00:00.
+        Default is 0.
         """,
     )
     transport_hls.add_argument(
         "--hls-duration",
-        type=hours_minutes_seconds,
-        metavar="[HH:]MM:SS",
-        default=None,
+        type=hours_minutes_seconds_float,
+        metavar="[[XX:]XX:]XX[.XX] | [XXh][XXm][XX[.XX]s]",
         help="""
         Limit the playback duration, useful for watching segments of a stream.
         The actual duration may be slightly longer, as it is rounded to the
@@ -1070,30 +1068,6 @@ def build_parser():
     transport_hls.add_argument("--hls-timeout", help=argparse.SUPPRESS)
     transport.add_argument("--http-stream-timeout", help=argparse.SUPPRESS)
 
-
-    transport_ffmpeg.add_argument(
-        "--ffmpeg_dkey",
-        metavar="DKEY",
-        type=str,
-        help="""
-        Use a CENC decryption key to decrypt the media that ffmpeg receives as
-        an input from the DASH streaming that you play with streamlink.
-        If only one decryption key is provided, it will be used for both video and audio.
-        If --ffmpeg_dkey_2 is also provided, it will be used for the first track.
-        Example: --ffmpeg_dkey "<hex key>"
-        """,
-    )
-    transport_ffmpeg.add_argument(
-        "--ffmpeg_dkey_2",
-        metavar="DKEY",
-        type=str,
-        help="""
-        Use a CENC decryption key to decrypt the media that ffmpeg receives as
-        an input from the DASH streaming that you play with streamlink.
-        This key will be used for the second track only.
-        Example: --decryption_key_2 "<hex key>"
-        """,
-    )
     transport_ffmpeg.add_argument(
         "--ffmpeg-ffmpeg",
         metavar="FILENAME",
@@ -1416,8 +1390,6 @@ _ARGUMENT_TO_SESSIONOPTION: List[Tuple[str, str, Optional[Callable[[Any], Any]]]
     ("hls_segment_ignore_names", "hls-segment-ignore-names", None),
     ("hls_segment_key_uri", "hls-segment-key-uri", None),
     ("hls_audio_select", "hls-audio-select", None),
-    ("ffmpeg_dkey", "ffmpeg_dkey", None),
-    ("ffmpeg_dkey_2", "ffmpeg_dkey_2", None),
     ("dash_manifest_reload_attempts", "dash-manifest-reload-attempts", None),
     ("ffmpeg_ffmpeg", "ffmpeg-ffmpeg", None),
     ("ffmpeg_no_validation", "ffmpeg-no-validation", None),
